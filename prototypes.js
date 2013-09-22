@@ -54,7 +54,8 @@ proto.unpack = function (argsDict, defaultArgsDict) {
     for (var i in defaultArgsDict) {
         proto.debug && console.log ('i = ' + i);
         proto.debug && console.log (argsDict[i]);
-        if ($.inArray (i, Object.keys (argsDict)) !== -1) {
+        if ($.inArray (i, Object.keys (argsDict)) !== -1 &&
+            argsDict[i] !== undefined) {
             //console.log ('in');
             that[i] = argsDict[i];
         } else {
@@ -502,6 +503,7 @@ World.prototype.addRegion = function (region) {
 };
 
 World.prototype.addThing = function (thing) {
+    proto.renameIfNecessary (this.things, thing);
     this.things[thing.name] = thing;
 };
 
@@ -658,6 +660,7 @@ function Region (argsDict) {
         y: 0,
         width: (proto.activeWorld ? proto.activeWorld.width : 0),
         height: (proto.activeWorld ? proto.activeWorld.height : 0),
+        turnLength: 1000 /* in ms */
     }
 
     proto.unpack.apply (this, [argsDict, defaultPropsDict]);
@@ -666,6 +669,7 @@ function Region (argsDict) {
     this.things = {};
     this.setupFunctions = [];
     this.takedownFunctions = [];
+    this.turnFunctions = [];
     this.me = null;
 };
 
@@ -677,6 +681,32 @@ Region.prototype.allSpritesLoaded = function () {
             this.things[i].allSpritesLoaded ()
     }
     return allSpritesLoaded;
+};
+
+Region.prototype.startTurnEvents = function (fn) {
+    var that = this;
+    if (this.turnTimeout) {
+        clearTimeout (this.turnTimeout);
+    }
+    this.turnTimeout = setTimeout (function setReady () {
+        //console.log ('EventFunction: ' + this.name + ' spinning');
+        for (var i in that.turnFunctions) {
+            that.turnFunctions[i] ();
+        }
+        if (that.turnFunctions.length > 0) {
+            if (this.turnTimeout) {
+                clearTimeout (this.turnTimeout);
+            }
+            this.turnTimeout = setTimeout (setReady, that.turnLength);
+        }
+    }, this.turnLength);
+};
+
+Region.prototype.addTurnFunction = function (fn) {
+    this.turnFunctions.push (fn);
+    if (this.turnFunctions.length === 1) {
+        this.startTurnEvents ();
+    }
 };
 
 Region.prototype.addSetupFunction = function (fn) {
@@ -782,9 +812,10 @@ Region.prototype.deleteUser = function (userId) {
 };
 
 Region.prototype.addThing = function (thing) {
+    console.log ('Region.addThing: thing.name = ' + thing.name);
     if (thing.name === '' || 
         $.inArray (thing.name, Object.keys (this.things)) !== -1) {
-        thing.name = this.things.length;
+        thing.name = Object.keys (this.things).length;
         proto.debug && console.log ('renaming ' + thing.name);
     }
     this.things[thing.name] = thing;
@@ -1363,10 +1394,9 @@ Thing.prototype.iframeGetSrc = function (iframeName, url) {
 
 
 Thing.prototype.addClickFunction = function (fn, makeClickable) {
-    makeClickable = 
-        typeof makeClickable === 'undefined' ? false : makeClickable;
+    if (makeClickable !== undefined)
+        this.isClickable = makeClickable;
     this.clickFunctions.push (fn);
-    this.isClickable = makeClickable;
 }
 
 Thing.prototype.addMouseoverFunction = function (fn) {
@@ -1733,11 +1763,25 @@ function Button (name, x, y, width, height, zIndex, buttonImagePath,
         'isUpdated': false
     });
 
-    buttonSpr = new Sprite (name, x, y, width, height, 
-                             buttonImagePath);
+    buttonSpr = new Sprite ({
+        name: name, 
+        x: x, 
+        y: y, 
+        width: width, 
+        height: height, 
+        imageSrc: buttonImagePath
+    });
 
-    buttonText = new Text (name, x + 40, y + 10, fontSize, font,
-                            10000, width - 80, text);
+    buttonText = new Text ({
+        name: name, 
+        x: x + 40, 
+        y: y + 10, 
+        fontSize: fontSize, 
+        font: font,
+        lineLength: 10000, 
+        lineWidt: width - 80, 
+        string: text
+    });
 
     buttonCanvas.addSprite (buttonSpr);
     buttonCanvas.addText (buttonText);
@@ -1759,8 +1803,15 @@ Button.prototype.addMouseoverImage = function (imagePath) {
     this.isMouseoverable = true;
     this.isMouseoffable = true;
 
-    hoverSpr = new Sprite (this.name + "_hover", this.x, this.y, 
-                            this.width, this.height, imagePath, true);
+    hoverSpr = new Sprite ({
+        name: this.name + "_hover", 
+        x: this.x, 
+        y: this.y, 
+        width: this.width, 
+        height: this.height, 
+        imageSrc: imagePath, 
+        isHidden: true
+    });
     this.canvasLayers[this.name].addSprite (hoverSpr);
     
     var that = this;
@@ -1827,16 +1878,26 @@ function CommonThing (argsDict) {//x, y, width, height, zIndex, view,
     });
 
     if (typeof this.imagePaths === 'string') { // 1 img only
-        var spr = new Sprite (
-            this.name, this.x, this.y, this.width, this.height, 
-            this.imagePaths);
+        var spr = new Sprite ({
+            name: this.name, 
+            x: this.x, 
+            y: this.y, 
+            width: this.width, 
+            height: this.height, 
+            imageSrc: this.imagePaths
+        });
         thingCanvas.addSprite (spr);
     } else if (typeof this.imagePaths === 'object') { // array specified
         var spr;
         for (var i in this.imagePaths) {
-            spr = new Sprite (
-                this.name + "_" + i, this.x, this.y, this.width, 
-                this.height, this.imagePaths[i]);
+            spr = new Sprite ({
+                name: this.name + "_" + i, 
+                x: this.x, 
+                y: this.y, 
+                width: this.width, 
+                height: this.height, 
+                imageSrc: this.imagePaths[i]
+            });
             thingCanvas.addSprite (spr);
         }
     }
@@ -1866,7 +1927,7 @@ CommonThing.prototype.getTopCanvas = function () {
     return topCanvas;
 };
 
-CommonThing.prototype.addPath = function (varArgs) {
+CommonThing.prototype.addPath = function (varArgs, zIndex) {
     argsDict = typeof argsDict === 'undefined' ? {} : argsDict;
 
     var path;
@@ -1876,9 +1937,9 @@ CommonThing.prototype.addPath = function (varArgs) {
         path = new Path (varArgs);
     }
  
-    if (typeof zIndex == 'undefined') {
-        this.canvasLayers[this.name].addPath (path);
-        path.owner = this.canvasLayers[this.name];
+    if (typeof zIndex === 'undefined') {
+        this.getTopCanvas ().addPath (path);
+        path.owner = this.getTopCanvas ();
     } else {
 
         var len = 0;
@@ -1905,7 +1966,7 @@ CommonThing.prototype.addPath = function (varArgs) {
         });
 
         thingCanvas.addPath (path);
-        path.owner = this.canvasLayers[thingCanvas];
+        path.owner = this.canvasLayers[thingCanvas.name];
         this.addCanvasLayer (thingCanvas);
     }
 
@@ -1954,6 +2015,7 @@ CommonThing.prototype.addRect = function (argsDict) {
  
     if (typeof zIndex === 'undefined') {
         this.getTopCanvas ().addRect (rect);
+        rect.owner = this.getTopCanvas ();
     } else {
 
         var len = 0;
@@ -1981,6 +2043,7 @@ CommonThing.prototype.addRect = function (argsDict) {
         });
 
         thingCanvas.addRect (rect);
+        rect.ownder = thingCanvas;
         this.addCanvasLayer (thingCanvas);
     }
 
@@ -2026,12 +2089,25 @@ CommonThing.prototype.addSprite = function (name, x, y, width,
     var spr;
 
     if (typeof imagePaths == 'string') { // 1 img only
-        spr = new Sprite (name, x, y, width, height, imagePaths);
+        spr = new Sprite ({
+            name: name, 
+            x: x, 
+            y: y, 
+            width: width, 
+            height: height, 
+            imageSrc: imagePaths
+        });
     } else if (typeof imagePaths == 'object') { // array specified
         spr = [];
         for (var i in imagePaths) {
-            nextSpr = new Sprite (name + "_" + i, x, y, width, height, 
-                              imagePaths[i]);
+            nextSpr = new Sprite ({
+                name: name + "_" + i, 
+                x: x, 
+                y: y, 
+                width: width, 
+                height: height, 
+                imageSrc: imagePaths[i]
+            });
             spr.push(nextSpr);
         }
         isArray = true;
@@ -2287,13 +2363,37 @@ CommonThing.prototype.addAnimation = function (argsDict) {/*name, speed,
 
 }
 
-CommonThing.prototype.addText = function (name, x, y, fontSize, 
+CommonThing.prototype.addText = function (argsDict) {
+                                            /*name, x, y, fontSize, 
                                             font, lineLength, 
                                             lineWidth, string,
-                                            zIndex) {
+                                            zIndex) {*/
 
-    var txt = new Text (name, x, y, fontSize, font, 
-                        lineLength, lineWidth, string);
+    argsDict = typeof argsDict === 'undefined' ? {} : argsDict;
+
+    var name = argsDict['name'];
+    var x = argsDict['x'];
+    var y = argsDict['y'];
+    var fontSize = argsDict['fontSize'];
+    var font = argsDict['font'];
+    var lineLength = argsDict['lineLength'];
+    var lineWidth = argsDict['lineWidth'];
+    var string = argsDict['string'];
+    var zIndex = argsDict['zIndex'];
+
+    argsDict['x'] = typeof x === 'undefined' ? this.x : x;
+    argsDict['y'] = typeof y === 'undefined' ? this.y : y;
+
+    var txt = new Text ({
+        name: name, 
+        x: x, 
+        y: y, 
+        fontSize: fontSize, 
+        font: font, 
+        lineLength: lineLength, 
+        lineWidth: lineWidth, 
+        string: string
+    });
  
     if (typeof zIndex == 'undefined') {
         this.getTopCanvas ().addText (txt);
@@ -2351,8 +2451,16 @@ function TextThing (name, x, y, fontSize, font, lineLength,
     // add Thing's properties                   
     Thing.call (this, name, x, y, lineWidth, fontSize);
 
-    thingText = new Text (name, x, y, fontSize, font, lineLength,
-                           lineWidth, string);
+    thingText = new Text ({
+        name: name, 
+        x: x, 
+        y: y, 
+        fontSize: fontSize, 
+        font: font, 
+        lineLength: lineLength, 
+        lineWidth: lineWidth, 
+        string: string
+    });
     thingCanvas = new CanvasLayer ({
         'name': this.name + '_' + len, 
         'w': view.width,
@@ -2473,6 +2581,10 @@ function CanvasLayer (argsDict) {/*name, w, h, zIndex, isUpdated,
     this.ctx = this.canvas.getContext ('2d');
     this.offsetX = 0;
     this.offsetY = 0;
+}
+
+CanvasLayer.prototype.toDataURL = function () {
+    return this.canvas.toDataURL ();
 }
 
 CanvasLayer.prototype.allSpritesLoaded = function () {
@@ -3082,7 +3194,8 @@ function Rect (argsDict) {
         width: 0,
         height: 0,
         isHidden: false,
-        color: 'black'
+        color: 'black',
+        owner: null
     };
 
     proto.unpack.apply (this, [argsDict, defaultPropsDict]);
@@ -3091,16 +3204,19 @@ function Rect (argsDict) {
 Rect.prototype.resize = function (w, h) {
     this.width = w;
     this.height = h;
+    if (this.owner) this.owner.isUpdated = false;
 }
 
 Rect.prototype.moveTo = function (x, y) {
     this.x = x;
     this.y = y;
+    if (this.owner) this.owner.isUpdated = false;
 }
 
 Rect.prototype.moveToRelative = function (x, y) {
     this.x += x;
     this.y += y;
+    if (this.owner) this.owner.isUpdated = false;
 }
 
 Rect.prototype.draw = function (canvas, ctx, view) {
@@ -3155,23 +3271,28 @@ Description - Sprite objects contain all the information needed by a
     CanvasLayer object to draw images. Use CanvasLayer.addSprite () 
     to add a Sprite object to a CanvasLayer.
 */
-function Sprite (name, x, y, w, h, imageSrc, isHidden) {
-    // check for argument else use default
-    this.isHidden = 
-        typeof isHidden !== 'undefined' ? isHidden : false;
+function Sprite (argsDict) {//name, x, y, w, h, imageSrc, isHidden) {
 
-    this.name = name;
+    argsDict = typeof argsDict === 'undefined' ? {} : argsDict;
+
+    var defaultPropsDict = {
+        name: 'default',
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0,
+        imageSrc: undefined,
+        isHidden: false
+    };
+
+    proto.unpack.apply (this, [argsDict, defaultPropsDict]);
 
     // setup image
     this.image = new Image ();
-    this.image.src = imageSrc;
+    this.image.src = this.imageSrc;
     var that = this;
     this.image.onload = function () { that.isLoaded = true; };
 
-    this.x = x;
-    this.y = y;
-    this.width = w;
-    this.height = h;
     this.isLoaded = false;
 
 }
@@ -3331,16 +3452,26 @@ function Animation (argsDict) {
 
     if (this.imagePaths) {
         if (typeof this.imagePaths == 'string') { // 1 img only
-            var spr = new Sprite (
-                name, this.x, this.y, this.width, this.height, 
-                this.imagePaths);
+            var spr = new Sprite ({
+                'name': name, 
+                'x': this.x, 
+                'y': this.y, 
+                'width': this.width, 
+                'height': this.height, 
+                'imageSrc': this.imagePaths
+            });
             this.addSprite (spr);
         } else if (typeof this.imagePaths == 'object') { // array specified
             var spr;
             for (var i in this.imagePaths) {
-                spr = new Sprite (
-                    name + "_" + i, this.x, this.y, this.width, 
-                    this.height, this.imagePaths[i]);
+                spr = new Sprite ({
+                    name: name + "_" + i, 
+                    x: this.x, 
+                    y: this.y, 
+                    width: this.width, 
+                    height: this.height, 
+                    imageSrc: this.imagePaths[i]
+                });
                 this.addSprite (spr);
             }
         } else {
@@ -3636,8 +3767,12 @@ function CustomFont (name, cellWidth, cellHeight, imagePath) {
     this.cellHeight = cellHeight;
     this.name = name;
 
-    this.fontImage = new Sprite ('fontImage', 0, 0, cellWidth * 26,
-                                  cellHeight * 2, imagePath);
+    this.fontImage = new Sprite ({
+        name: 'fontImage', 
+        width: cellWidth * 26,
+        height: cellHeight * 2, 
+        imageSrc: imagePath
+    });
     if (this.fontImage.isLoaded == false) {
         var that = this;
         setTimeout (function checkIsLoaded () {
@@ -3718,31 +3853,36 @@ Description - Text objects contain all the information needed by a
     CanvasLayer object to draw text. Use CanvasLayer.addText () to
     add a Text object to a CanvasLayer.
 */
-function Text (name, x, y, fontSize, font, lineLength, lineWidth, 
-               string, alignment) {
-    this.alignment = 
-        typeof alignment !== 'undefined' ? alignment : 'left';
+function Text (argsDict) {
+    /*name, x, y, fontSize, font, lineLength, lineWidth, 
+               string, alignment) {*/
 
-    this.name = name;
-    
+    argsDict = typeof argsDict === 'undefined' ? {} : argsDict;
+
+    var defaultPropsDict = {
+        name: 'default',
     /* x and y represent the coordinates of the text with respect to 
        the current region */ 
-    this.x = x; 
-    this.y = y;
+        x: 0,
+        y: 0,
+        font: 'courier', // a string or CustomFont object
+        fontSize: '12px',
+        lineLength: '72', // max characters per line
+        lineWidth: '72px', // max line width
+        string: '', // the text to be drawn
+        alignment: 'left',
+        rVal: 0,
+        gVal: 0,
+        bVal: 0,
+        spacing: 0
+    };
 
-    this.font = font; // a string or CustomFont object
+    proto.unpack.apply (this, [argsDict, defaultPropsDict]);
+
     this.fontType = typeof (font);
-    this.fontSize = fontSize; 
-    this.lineLength = lineLength; // max characters per line
-    this.lineHeight = fontSize;
-    this.lineWidth = lineWidth; // max line width
-    this.string = string; // the text to be drawn
+    this.lineHeight = this.fontSize;
     //this.lines = 0;
     this.lines = this.string.length / this.lineLength;
-    this.rVal = 0;
-    this.gVal = 0;
-    this.bVal = 0;
-    this.spacing = 0;
 
 }
 
