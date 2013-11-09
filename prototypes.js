@@ -4,6 +4,8 @@ https://github.com/parenparen/Prototypes.js
 Copyright 2013 Derek Mueller
 Released under the MIT license
 http://opensource.org/licenses/MIT
+
+Sat Nov  9 15:28:29 PST 2013
 */
 
 //// prototypes
@@ -19,22 +21,76 @@ proto.DOWN = 40;
 proto.SPACE = 32;
 proto.MP = false;
 proto.LOCAL = false;
-proto.debug = true;
+proto.DEBUG = false;
 proto.socket = null;
 proto.activeWorld = null;
 
 
+/***********************************************************************
+* Utility functions
+***********************************************************************/
 
+proto.err = function (errMsg) {
+    proto.DEBUG && console.log ('Error: ' + errMsg);
+};
+
+proto.getIntersect = function (
+    x1, y1, x2, y2,
+    x3, y3, x4, y4) {
+
+    var x = ((x1 * y2 - y1 * x2) * (x3 - x4) - 
+                (x1 - x2) * (x3 * y4 - y3 * x4)) /
+            ((x1 - x2) * (y3 - y4) - 
+                (y1 - y2) * (x3 - x4));
+    var y = ((x1 * y2 - y1 * x2) * (y3 - y4) - 
+                (y1 - y2) * (x3 * y4 - y3 * x4)) /
+            ((x1 - x2) * (y3 - y4) - 
+                (y1 - y2) * (x3 - x4));
+    return [x, y];
+};
+
+proto.cartToPolar = function (x, y) {
+    var theta = Math.atan2 (y, x);
+    var r = Math.sqrt (x * x + y * y);
+    return [r, theta];
+};
+
+proto.polarToCartX = function (r, theta) {
+    return (Math.cos (theta) * r);
+};
+
+proto.polarToCartY = function (r, theta) {
+    return (Math.sin (theta) * r);
+};
+
+/*
+Alters an object's name property so that it doesn't conflict with keys
+in a given dictionary.
+*/
 proto.renameIfNecessary = function (objDict, newElem) {
-    proto.debug && console.log ('renameIfNecessary: objDict.len = ' + 
-        Object.keys (objDict).length);
+    //proto.DEBUG && console.log ('renameIfNecessary: objDict.len = ' + 
+        //Object.keys (objDict).length);
     if (newElem.name === '' ||  newElem.name === null || 
         typeof newElem.name === 'undefined' || 
         $.inArray (newElem.name, Object.keys (objDict)) !== -1) {
+
         newElem.name = Object.keys (objDict).length;
-        proto.debug && console.log ('renaming ' + newElem.name);
+        //proto.DEBUG && console.log ('renaming ' + newElem.name);
     }
 }
+
+/*
+Get the name of an object's constructor
+Parameters:
+    object - the object whose constructor name should be returned 
+Returns:
+    string - the name of the specified object's constructor 
+*/
+proto.name = function (obj) {
+    match = obj.constructor.toString ().
+        match (/^function\s+(\w+)\s+\((?:\w+(?:,[^,]+)*)?\)/);
+    return (match && match.length) ? match[1] : '';
+};
 
 /*
 Applied in object contructors to facillitate use of variable length
@@ -45,15 +101,15 @@ Parameters:
         whose values are default property values
 */
 proto.unpack = function (argsDict, defaultArgsDict) {
-    proto.debug && console.log ('unpack');
-    proto.debug && console.log (Object.keys (argsDict));
-    proto.debug && console.log (argsDict);
-    proto.debug && console.log (defaultArgsDict);
-    proto.debug && console.log (this);
+    /*proto.DEBUG && console.log ('unpack');
+    proto.DEBUG && console.log (Object.keys (argsDict));
+    proto.DEBUG && console.log (argsDict);
+    proto.DEBUG && console.log (defaultArgsDict);
+    proto.DEBUG && console.log (this);*/
     var that = this;
     for (var i in defaultArgsDict) {
-        proto.debug && console.log ('i = ' + i);
-        proto.debug && console.log (argsDict[i]);
+        /*proto.DEBUG && console.log ('i = ' + i);
+        proto.DEBUG && console.log (argsDict[i]);*/
         if ($.inArray (i, Object.keys (argsDict)) !== -1 &&
             argsDict[i] !== undefined) {
             //console.log ('in');
@@ -133,7 +189,7 @@ Universe.prototype.removeAllWorlds = function (world) {
 
 Universe.prototype.getWorld = function (worldName) {
     if (!this.worlds[worldName]) {
-        proto.debug && console.log (
+        proto.DEBUG && console.log (
             "Warning: Universe.prototype.getWorld () called for " +
             "non-existent world");
     }
@@ -188,7 +244,7 @@ World.click = function (world) {
             $(document).unbind ('click', inner);
             return;
         }
-        proto.debug && console.log ('click: ' + evt.clientX + ', ' + evt.clientY);
+        proto.DEBUG && console.log ('click: ' + evt.clientX + ', ' + evt.clientY);
         var mouseX = evt.clientX - 
                 $('#' + world.name).position ().left;
         var mouseY = evt.clientY - 
@@ -228,7 +284,7 @@ World.mousedown = function (world) {
             $(document).unbind ('click', inner);
             return;
         }
-        proto.debug && console.log ('mousedown: ' + evt.clientX + ', ' + evt.clientY);
+        proto.DEBUG && console.log ('mousedown: ' + evt.clientX + ', ' + evt.clientY);
         var mouseX = evt.clientX - 
                 $('#' + world.name).position ().left;
         var mouseY = evt.clientY - 
@@ -245,7 +301,7 @@ World.mouseup = function (world) {
             $(document).unbind ('click', inner);
             return;
         }
-        proto.debug && console.log ('mouseup: ' + evt.clientX + ', ' + evt.clientY);
+        proto.DEBUG && console.log ('mouseup: ' + evt.clientX + ', ' + evt.clientY);
         var mouseX = evt.clientX - 
                 $('#' + world.name).position ().left;
         var mouseY = evt.clientY - 
@@ -263,7 +319,7 @@ World.keydown = function (world) {
             return;
         }
         //evt.preventDefault ();
-        proto.debug && console.log ('keydown: ' + evt.keyCode);
+        proto.DEBUG && console.log ('keydown: ' + evt.keyCode);
         var key = evt.keyCode;
         if (key == 8) {
             if (world.currRegion && world.currRegion.me)
@@ -297,7 +353,7 @@ World.keyup = function (world) {
             return;
         }
         //evt.preventDefault ();
-        proto.debug && console.log ('keyup: ' + evt.keyCode);
+        proto.DEBUG && console.log ('keyup: ' + evt.keyCode);
         var key = evt.keyCode;
         if (key == proto.UP || key == proto.LEFT || 
             key == proto.RIGHT || key == proto.DOWN || 
@@ -324,7 +380,7 @@ World.keypress = function (world) {
             return;
         }
         //evt.preventDefault ();
-        proto.debug && console.log ('keypress: ' + evt.charCode);
+        proto.DEBUG && console.log ('keypress: ' + evt.charCode);
         var key = evt.charCode;
         if (key >= 32 && key <= 122) {
             if (world.currRegion && world.currRegion.me)
@@ -345,7 +401,7 @@ World.unsupportedKeypress = function (charCode, world) {
         charCode += 32;
     }
 
-    proto.debug && console.log ('keypress: ' + charCode);
+    proto.DEBUG && console.log ('keypress: ' + charCode);
     var key = charCode;
     if (key >= 32 && key <= 122) {
         if (world.currRegion && world.currRegion.me)
@@ -411,8 +467,8 @@ World.prototype._takedown = function () {
     for (var i in this.takedownFunctions) {
         this.takedownFunctions[i] (this);
     }
-    proto.debug && console.log ('removing ');
-    proto.debug && console.debug ($(this.dummyCanvas).parent ());
+    proto.DEBUG && console.log ('removing ');
+    proto.DEBUG && console.debug ($(this.dummyCanvas).parent ());
     $(this.dummyCanvas).siblings ('canvas').remove ();
 };
 
@@ -572,7 +628,7 @@ World.prototype.mousemove = function (mouseX, mouseY) {
         // setup mouseIsInside variable
         if ((thing.isMouseoverable || thing.isMouseoffable) &&
             thing.mouseIsInside == undefined) {
-            proto.debug && console.log ('setup');
+            //proto.DEBUG && console.log ('setup');
             if (thing.clickedInBox (mouseX, mouseY, this.view)) {
                 thing.mouseIsInside = true;
             } else {
@@ -610,11 +666,11 @@ World.prototype.mousemove = function (mouseX, mouseY) {
 
 World.prototype.click = function (mouseX, mouseY) {
     for (var thingName in this.things) {
-        proto.debug && console.log ('world.click');
+        proto.DEBUG && console.log ('world.click');
         if (this.things[thingName].isClickable &&
             this.things[thingName].clickedInBox (
                 mouseX, mouseY, this.view)) {
-            proto.debug && console.log ('world.click: calling click ()');
+            proto.DEBUG && console.log ('world.click: calling click ()');
             this.things[thingName].click (mouseX, mouseY, this.view);
         }
     }
@@ -750,7 +806,7 @@ Region.prototype.setState = function (stateObjs) {
 
     for (var stateObjName in stateObjs) {
         if (!this.things[stateObjName]) {
-            proto.debug && console.log ('Warning: Region.setState: Region does ' +
+            proto.DEBUG && console.log ('Warning: Region.setState: Region does ' +
                          'not have a Thing named ' + stateObjName);
             continue;
         }
@@ -812,22 +868,23 @@ Region.prototype.deleteUser = function (userId) {
 };
 
 Region.prototype.addThing = function (thing) {
-    console.log ('Region.addThing: thing.name = ' + thing.name);
+    proto.DEBUG && console.log ('Region.addThing: thing.name = ' + thing.name);
     if (thing.name === '' || 
         $.inArray (thing.name, Object.keys (this.things)) !== -1) {
         thing.name = Object.keys (this.things).length;
-        proto.debug && console.log ('renaming ' + thing.name);
+        proto.DEBUG && console.log ('renaming ' + thing.name);
     }
     this.things[thing.name] = thing;
 };
 
 Region.prototype.deleteThing = function (thing) {
+    this.things[thing.name].hide (true);
     delete (this.things[thing.name]);
 };
 
 Region.prototype.keydown = function (userId, key, view) {
 
-    proto.debug && console.log ("region.keydown: key, userId = " + key + 
+    proto.DEBUG && console.log ("region.keydown: key, userId = " + key + 
                  ", " + userId);
     this.users[userId].keydown (key, userId);
 
@@ -838,7 +895,7 @@ Region.prototype.keydown = function (userId, key, view) {
 
 Region.prototype.keyup = function (userId, key, view) {
 
-    proto.debug && console.log ("region.keyup: key, userId = " + key + 
+    proto.DEBUG && console.log ("region.keyup: key, userId = " + key + 
                  ", " + userId);
     this.users[userId].keyup (key, userId);
 
@@ -848,7 +905,7 @@ Region.prototype.keyup = function (userId, key, view) {
 };
 
 Region.prototype.keypress = function (userId, key) {
-    proto.debug && console.log ('Region.keyPress');
+    proto.DEBUG && console.log ('Region.keyPress');
     this.users[userId].keypress (key);
     for (var thingName in this.things) {
         this.things[thingName].keydown (key)
@@ -856,7 +913,7 @@ Region.prototype.keypress = function (userId, key) {
 };
 
 Region.prototype.click = function (mouseX, mouseY, view) {
-    proto.debug && console.log ('Region.click');
+    proto.DEBUG && console.log ('Region.click');
     var topmost = null;
     for (var thingName in this.things) {
         if (this.things[thingName].isClickable &&
@@ -868,11 +925,10 @@ Region.prototype.click = function (mouseX, mouseY, view) {
                 this.things[thingName].getTopZindex ()) {
                 topmost = this.things[thingName];
             } 
-
         }
     }
     if (topmost) {
-        proto.debug && console.log ('Region.click: clicking ' + topmost);
+        proto.DEBUG && console.log ('Region.click: clicking ' + topmost);
         topmost.click (mouseX, mouseY);
     }
 };
@@ -884,8 +940,7 @@ Region.prototype.mousedown = function (mouseX, mouseY, view) {
             this.things[thingName].clickedInBox (mouseX, mouseY, 
                                                     view)) {
             this.things[thingName].isBeingDragged = true;
-            this.things[thingName].setMouseClickCoords (mouseX,
-                                                            mouseY);
+            this.things[thingName].setMouseClickCoords (mouseX, mouseY);
 
         }
     }
@@ -894,8 +949,11 @@ Region.prototype.mousedown = function (mouseX, mouseY, view) {
 Region.prototype.mouseup = function (mouseX, mouseY, view) {
     for (var thingName in this.things) {
         if (this.things[thingName].isDraggable &&
-            !this.things[thingName].isHidden) {
+            !this.things[thingName].isHidden && 
+            this.things[thingName].isBeingDragged) {
+
             this.things[thingName].isBeingDragged = false;
+            this.things[thingName].drop (mouseX, mouseY);
         }
     }
 };
@@ -925,7 +983,7 @@ Region.prototype.mousemove = function (mouseX, mouseY, view) {
         // setup mouseIsInside variable
         if ((thing.isMouseoverable || thing.isMouseoffable) &&
             thing.mouseIsInside == undefined) {
-            proto.debug && console.log ('setup');
+            //proto.DEBUG && console.log ('setup');
             if (thing.clickedInBox (mouseX, mouseY, view)) {
                 thing.mouseIsInside = true;
             } else {
@@ -1136,7 +1194,7 @@ EventFunction.prototype.call = function () {
 };
 
 EventFunction.prototype.turnOn = function () {
-    proto.debug && console.log ('EventFunction: setReady: turning on evt fn');
+    proto.DEBUG && console.log ('EventFunction: setReady: turning on evt fn');
     this.isOn = true;
 
     if (this.frequency === 0) {
@@ -1174,8 +1232,8 @@ EventFunction.prototype.turnOff = function () {
 
 function Thing (argsDict) {
 
-    proto.debug && console.log ('Thing argsDict = ');
-    proto.debug && console.debug (argsDict);
+    proto.DEBUG && console.log ('Thing argsDict = ');
+    proto.DEBUG && console.debug (argsDict);
 
     // x, y, w, h set the collision rectangle, they don't correspond to
     // the location and sizes of the avatar's sprites
@@ -1198,7 +1256,7 @@ function Thing (argsDict) {
 
     proto.unpack.apply (this, [argsDict, defaultPropsDict]);
 
-    proto.debug && console.log (this);
+    proto.DEBUG && console.log (this);
 
     this.isBeingDragged = false;
 
@@ -1219,6 +1277,7 @@ function Thing (argsDict) {
     this.keydownFunctions = [];
     this.keyupFunctions = [];
     this.dragFunctions = [];
+    this.dropFunctions = [];
     this.eventFunctions = {};
 
     this.mouseClickX;
@@ -1279,7 +1338,7 @@ Thing.prototype.setVelocity = function (xVelocity, yVelocity) {
         }
         this.motionTimeout = setTimeout (
             function moveForward () {
-	            console.log ('setVelocity timeout');
+	            proto.DEBUG && console.log ('setVelocity timeout');
 	
 	            that.yVelocity = that.yVelocity + 
 	                (that.frameRate / 1000) * that.gravity;
@@ -1417,7 +1476,7 @@ Thing.prototype.addKeydownFunction = function (fn) {
 
 Thing.prototype.addArrowFunctions = function (argsDict) {
     var arrowsFn = function (key) {
-        proto.debug && console.log ('arrowsFn');
+        proto.DEBUG && console.log ('arrowsFn');
         switch (key) {
             case proto.LEFT:
                 argsDict['left'] ();
@@ -1447,12 +1506,30 @@ Thing.prototype.addKeyupFunction = function (fn) {
     this.keyupFunctions.push (fn);
 }
 
+/*
+Parameters:
+   fn - a function with two params (mouseX, mouseY) 
+*/
 Thing.prototype.addDragFunction = function (fn, makeDraggable) {
     makeDraggable = 
         typeof makeDraggable === 'undefined' ? false : makeDraggable;
     this.dragFunctions.push (fn);
     this.isDraggable = makeDraggable;
-}
+};
+
+/*
+Parameters:
+   fn - a function with two params (mouseX, mouseY) 
+Preconditions:
+    - thing is draggable 
+*/
+Thing.prototype.addDropFunction = function (fn) {
+    if (!this.isDraggable) {
+        proto.err ('Thing.addDropFunction: thing is not dragable');
+        return;
+    }
+    this.dropFunctions.push (fn);
+};
 
 Thing.prototype.addEventFunction = function (name, fn, frequency) {
     var newEvtFn = new EventFunction (name, fn, frequency);
@@ -1480,7 +1557,7 @@ Thing.prototype.turnOnEventFunction = function (name) {
 };
 
 Thing.prototype.click = function (mouseX, mouseY) {
-    proto.debug && console.log ('Thing.click: click!');
+    proto.DEBUG && console.log ('Thing.click: click!');
     for (var i in this.clickFunctions) {
         this.clickFunctions[i] (mouseX, mouseY);
     }
@@ -1498,17 +1575,24 @@ Thing.prototype.drag = function (mouseX, mouseY) {
     for (var i in this.dragFunctions) {
         this.dragFunctions[i] (mouseX, mouseY);
     }
-}
+};
+
+Thing.prototype.drop = function (mouseX, mouseY) {
+    proto.DEBUG && console.log ('Thing.drop');
+    for (var i in this.dropFunctions) {
+        this.dropFunctions[i] (mouseX, mouseY);
+    }
+};
 
 Thing.prototype.keydown = function (key) {
-    proto.debug && console.log ('Thing.keydown: keydown ' + key);
+    proto.DEBUG && console.log ('Thing.keydown: keydown ' + key);
     for (var i in this.keydownFunctions) {
         this.keydownFunctions[i] (key);
     }
 }
 
 Thing.prototype.keyup = function (key) {
-    proto.debug && console.log ('Thing.keyup: keyup ' + key);
+    proto.DEBUG && console.log ('Thing.keyup: keyup ' + key);
     for (var i in this.keyupFunctions) {
         this.keyupFunctions[i] (key);
     }
@@ -1578,12 +1662,20 @@ Thing.prototype.drawFixed = function () {
     return drewSomething;
 }
 
-Thing.prototype.moveTo = function (x, y) {
+Thing.prototype.moveTo = function (x, y, maintainOffset) {
+    maintainOffset = 
+        maintainOffset === undefined ? false : maintainOffset;
+    for (var canvasLayerName in this.canvasLayers) {
+        if (maintainOffset) {
+            this.canvasLayers[canvasLayerName].
+                imageMoveToMaintainOffset (x, y, this.x, this.y);
+        } else {
+            this.canvasLayers[canvasLayerName].imageMoveTo (
+                x, y, maintainOffset);
+        }
+    }
     this.x = x;
     this.y = y;
-    for (var canvasLayerName in this.canvasLayers) {
-        this.canvasLayers[canvasLayerName].imageMoveTo (x, y);
-    }
 }
 
 Thing.prototype.moveToRelative = function (x, y) {
@@ -1610,7 +1702,7 @@ collisionCheck -
 rectangle, false otherwise.
 */
 Thing.prototype.collisionCheck = function (obj) {
-    proto.debug && console.log ('collisionCheck: ' +
+    proto.DEBUG && console.log ('collisionCheck: ' +
                  'this.x = ' + this.x + ', ' + 
                  'this.width = ' + this.width + ', ' + 
                  'obj.x = ' + obj.x + ', ' + 
@@ -1669,6 +1761,7 @@ Thing.prototype.alignAllCanvasLayersToView = function (view) {
             resize (view.width, view.height);
     }
 }
+
 //Avatar.prototype.checkCollisions = function (size of avatar):
 //    loop through all things in the current region
 //        if they're solid, check for collision by comparing sizes and
@@ -1851,8 +1944,8 @@ function CommonThing (argsDict) {//x, y, width, height, zIndex, view,
 
     var thingSpr, thingCanvas;
 
-    proto.debug && console.log ('argsDict = ');
-    proto.debug && console.debug (argsDict);
+    proto.DEBUG && console.log ('argsDict = ');
+    proto.DEBUG && console.debug (argsDict);
 
     var defaultPropsDict = {
         zIndex: 0,
@@ -1866,7 +1959,7 @@ function CommonThing (argsDict) {//x, y, width, height, zIndex, view,
     // add Thing's properties                   
     Thing.call (this, argsDict);
 
-    proto.debug && console.log (this);
+    proto.DEBUG && console.log (this);
 
     thingCanvas = new CanvasLayer ({
         'name': this.name, 
@@ -1908,6 +2001,13 @@ function CommonThing (argsDict) {//x, y, width, height, zIndex, view,
 // inherit from Thing
 CommonThing.prototype = Object.create (Thing.prototype);
 
+CommonThing.prototype.clearCanvases = function () {
+    for (var i in this.canvasLayers) {
+        var canvas = this.canvasLayers[i];
+        canvas.clear ();
+    }
+};
+
 CommonThing.prototype.refreshCanvases = function () {
     for (var i in this.canvasLayers) {
         var canvas = this.canvasLayers[i];
@@ -1928,10 +2028,11 @@ CommonThing.prototype.getTopCanvas = function () {
 };
 
 CommonThing.prototype.addPath = function (varArgs, zIndex) {
-    argsDict = typeof argsDict === 'undefined' ? {} : argsDict;
+    varArgs = typeof varArgs === 'undefined' ? {} : varArgs;
 
     var path;
     if (varArgs instanceof Path) {
+        //proto.DEBUG && console.log ('instance of');
         path = varArgs;
     } else {
         path = new Path (varArgs);
@@ -1939,7 +2040,10 @@ CommonThing.prototype.addPath = function (varArgs, zIndex) {
  
     if (typeof zIndex === 'undefined') {
         this.getTopCanvas ().addPath (path);
+        //proto.DEBUG && console.log (path.owner);
         path.owner = this.getTopCanvas ();
+        //proto.DEBUG && console.log (path.owner);
+        //proto.DEBUG && console.log ('ownership set');
     } else {
 
         var len = 0;
@@ -1976,6 +2080,10 @@ CommonThing.prototype.addPath = function (varArgs, zIndex) {
 
 CommonThing.prototype.addCircle = function (varArgs) {
     var circle;
+    var x = varArgs['x'];
+    var y = varArgs['y'];
+    varArgs['x'] = typeof x === 'undefined' ? this.x : x;
+    varArgs['y'] = typeof y === 'undefined' ? this.y : y;
     if (varArgs instanceof Circle) {
         circle = varArgs;
     } else {
@@ -2007,9 +2115,9 @@ CommonThing.prototype.addRect = function (argsDict) {
 
     } else {
 
-        proto.debug && console.log ('addRect: '); 
+        proto.DEBUG && console.log ('addRect: '); 
         var rect = new Rect (argsDict);
-        proto.debug && console.log (rect);
+        proto.DEBUG && console.log (rect);
 
     }
  
@@ -2031,7 +2139,7 @@ CommonThing.prototype.addRect = function (argsDict) {
         var viewWidth = proto.activeWorld.view.width;
         var viewHeight = proto.activeWorld.view.height;
 
-        proto.debug && console.log ('creating new canvasLayer');
+        proto.DEBUG && console.log ('creating new canvasLayer');
  
         var thingCanvas = new CanvasLayer ({
             'name': this.name + '_' + len, 
@@ -2112,7 +2220,7 @@ CommonThing.prototype.addSprite = function (name, x, y, width,
         }
         isArray = true;
     } else {
-        proto.debug && console.log (
+        proto.DEBUG && console.log (
             "Error: CommonThing: imagePaths of invalid type");
     }
  
@@ -2371,30 +2479,20 @@ CommonThing.prototype.addText = function (argsDict) {
 
     argsDict = typeof argsDict === 'undefined' ? {} : argsDict;
 
-    var name = argsDict['name'];
     var x = argsDict['x'];
     var y = argsDict['y'];
-    var fontSize = argsDict['fontSize'];
-    var font = argsDict['font'];
-    var lineLength = argsDict['lineLength'];
-    var lineWidth = argsDict['lineWidth'];
-    var string = argsDict['string'];
     var zIndex = argsDict['zIndex'];
 
     argsDict['x'] = typeof x === 'undefined' ? this.x : x;
     argsDict['y'] = typeof y === 'undefined' ? this.y : y;
+    proto.DEBUG && console.log ('addText: argsDict = ');
+    proto.DEBUG && console.log (argsDict);
+    if (argsDict instanceof Text) {
+        var txt = argsDict;
+    } else {
+        var txt = new Text (argsDict);
+    }
 
-    var txt = new Text ({
-        name: name, 
-        x: x, 
-        y: y, 
-        fontSize: fontSize, 
-        font: font, 
-        lineLength: lineLength, 
-        lineWidth: lineWidth, 
-        string: string
-    });
- 
     if (typeof zIndex == 'undefined') {
         this.getTopCanvas ().addText (txt);
     } else {
@@ -2534,7 +2632,7 @@ function CanvasLayer (argsDict) {/*name, w, h, zIndex, isUpdated,
     this.visibility = this.isVisible ? "visible" : "hidden";
     this.isHidden = false;
 
-    proto.debug && console.log (CanvasLayer._dummyCanvasId);
+    proto.DEBUG && console.log (CanvasLayer._dummyCanvasId);
     this.canvasTop = 
         $("#" + CanvasLayer._dummyCanvasId).position ().top;
     this.canvasLeft = 
@@ -2551,13 +2649,13 @@ function CanvasLayer (argsDict) {/*name, w, h, zIndex, isUpdated,
     var canvasSelector = '#' + name + '_canvas_' + 
           CanvasLayer._dummyCanvasId;
     if ($(canvasSelector).length !== 0) {
-        proto.debug && console.log ('rename canvas');
+        proto.DEBUG && console.log ('rename canvas');
         var canvasNum = $(CanvasLayer._parentElement).
             find ('canvas').length;
         canvasEle.id = (name + '_' + canvasNum +  '_canvas_' +
             CanvasLayer._dummyCanvasId);
         this.name = name + '_' + canvasNum;
-        proto.debug && console.log ('id = ' + canvasEle.id);
+        proto.DEBUG && console.log ('id = ' + canvasEle.id);
     } else {
         canvasEle.id = 
             (name + '_canvas_' + CanvasLayer._dummyCanvasId);
@@ -2604,12 +2702,12 @@ CanvasLayer.prototype.allSpritesLoaded = function () {
 
 CanvasLayer.prototype.startContinuous = function () {
 
-    proto.debug && console.log ('canvasLayer.startContinuous');
+    proto.DEBUG && console.log ('canvasLayer.startContinuous');
     for (var animName in this.animations) {
-        proto.debug && console.log ('canvasLayer.startContinuous looking:' +
+        proto.DEBUG && console.log ('canvasLayer.startContinuous looking:' +
                      animName + ', ' + animName.isContinuous);
         if (this.animations[animName].isContinuous) {
-            proto.debug && console.log ('canvasLayer.startContinuous starting');
+            proto.DEBUG && console.log ('canvasLayer.startContinuous starting');
             this.animations[animName].start (this);
         }
     }
@@ -2630,12 +2728,12 @@ CanvasLayer.prototype.deleteAllAttributes = function () {
 CanvasLayer.prototype.addSprite = function (sprite) {
 
     // if the sprite is not loaded, keep checking until it is
-    proto.debug && console.log ("CanvasLayer.addSprite: sprite.isLoaded = " +
+    proto.DEBUG && console.log ("CanvasLayer.addSprite: sprite.isLoaded = " +
                  sprite.isLoaded);
     if (sprite.isLoaded == false) {
         var that = this;
         setTimeout (function checkIsLoaded () {
-            proto.debug && console.log ("checkIsLoaded: sprite, sprite.isLoaded = " +
+            proto.DEBUG && console.log ("checkIsLoaded: sprite, sprite.isLoaded = " +
                          sprite.image.src + ", " + 
                          sprite.isLoaded);
             if (sprite.isLoaded == false) {
@@ -2657,7 +2755,7 @@ CanvasLayer.prototype.addAnimation = function (animation) {
     if (animation.isLoaded == false) {
         var that = this;
         setTimeout (function checkIsLoaded () {
-            proto.debug && console.log ("checkIsLoaded: anim, anim.isLoaded = " +
+            proto.DEBUG && console.log ("checkIsLoaded: anim, anim.isLoaded = " +
                          animation.name+ ", " + 
                          animation.isLoaded);
             if (animation.isLoaded == false) {
@@ -2673,21 +2771,23 @@ CanvasLayer.prototype.addAnimation = function (animation) {
 
 CanvasLayer.prototype.addRect = function (rect) {
     proto.renameIfNecessary (this.rects, rect);
-    proto.debug && console.log ('addRect: name = ' + rect.name);
+    proto.DEBUG && console.log ('addRect: name = ' + rect.name);
     this.rects[rect.name] = rect;
     this.isUpdated = false;
 }
 
 CanvasLayer.prototype.addPath = function (path) {
-    proto.debug && console.log ('addPath ');
+    //proto.DEBUG && console.log ('addPath ');
     proto.renameIfNecessary (this.paths, path);
-    proto.debug && console.log (path);
+    //proto.DEBUG && console.log (path);
     this.paths[path.name] = path;
     this.isUpdated = false;
 }
 
 CanvasLayer.prototype.addText = function (text) {
+    proto.renameIfNecessary (this.texts, text);
     this.texts[text.name] = text;
+    this.isUpdated = false;
 }
 
 CanvasLayer.prototype.textAppendString = function (string) {
@@ -2729,11 +2829,15 @@ CanvasLayer.prototype.textDeleteLastChar = function () {
     this.isUpdated = false;
 }
 
+CanvasLayer.prototype.clear = function () {
+    this.ctx.clearRect (0, 0, this.canvas.width, this.canvas.height);
+};
+
 CanvasLayer.prototype.draw = function (view) {
-    proto.debug && console.log ("CanvasLayer: " + this.name + ": draw");
+    proto.DEBUG && console.log ("CanvasLayer: " + this.name + ": draw");
 
     if (this.clearOnDraw) {
-        proto.debug && console.log ('CanvasLayer: clearing');
+        proto.DEBUG && console.log ('CanvasLayer: clearing');
         this.ctx.clearRect (0, 0, this.canvas.width, 
                             this.canvas.height);
     }
@@ -2744,13 +2848,10 @@ CanvasLayer.prototype.draw = function (view) {
     }
     for (var spriteName in this.sprites) {
         if (!this.sprites[spriteName].isHidden) {
-            proto.debug && console.log ("canvasLayer.draw: drawing " + spriteName);
+            proto.DEBUG && console.log ("canvasLayer.draw: drawing " + spriteName);
             this.sprites[spriteName].draw (this.canvas, this.ctx, 
                                             view);
         }
-    }
-    for (var textName in this.texts) {
-        this.texts[textName].draw (this.canvas, this.ctx, view);
     }
     for (var rectName in this.rects) {
         if (!this.rects[rectName].isHidden) {
@@ -2760,13 +2861,16 @@ CanvasLayer.prototype.draw = function (view) {
     for (var pathName in this.paths) {
         this.paths[pathName].draw (this.canvas, this.ctx, view);
     }
+    for (var textName in this.texts) {
+        this.texts[textName].draw (this.canvas, this.ctx, view);
+    }
     this.isUpdated = true;
 }
 
 CanvasLayer.prototype.drawFixed = function (view) {
 
     if (this.clearOnDraw) {
-        proto.debug && console.log ('CanvasLayer: drawFixed: clearing');
+        proto.DEBUG && console.log ('CanvasLayer: drawFixed: clearing');
         this.ctx.clearRect (0, 0, this.canvas.width, 
                             this.canvas.height);
     }
@@ -2778,7 +2882,7 @@ CanvasLayer.prototype.drawFixed = function (view) {
     }
     for (var spriteName in this.sprites) {
         if (!this.sprites[spriteName].isHidden) {
-            proto.debug && console.log ("canvasLayer.draw: drawing " + spriteName);
+            proto.DEBUG && console.log ("canvasLayer.draw: drawing " + spriteName);
             this.sprites[spriteName].drawFixed (this.canvas, this.ctx, 
                                             view);
         }
@@ -2832,7 +2936,7 @@ CanvasLayer.prototype.textChangeFontSize = function (size) {
 }
 CanvasLayer.prototype.clear = function () {
 
-    proto.debug && console.log ('canvasLayer.clear, name = ' + this.name);
+    proto.DEBUG && console.log ('canvasLayer.clear, name = ' + this.name);
     this.ctx.clearRect (0, 0, this.canvas.width, this.canvas.height);
 }
 
@@ -2844,8 +2948,50 @@ CanvasLayer.prototype.imageScale = function (xScaleFactor,
     }
     this.isUpdated = false;
 }
+CanvasLayer.prototype.imageMoveToMaintainOffset = function (
+    x, y, thingX, thingY) {
+    var xOffset;
+    var yOffset;
 
-CanvasLayer.prototype.imageMoveTo = function (x, y) {
+    // loop through each drawable, call their moveTo functions
+    for (var spriteName in this.sprites) {
+        var sprite = this.sprites[spriteName];
+        xOffset = thingX - sprite.x;
+        yOffset = thingY - sprite.y;
+        sprite.moveTo (x + xOffset, y + yOffset);
+    }
+    for (var textName in this.texts) {
+        var text = this.texts[textName];
+        xOffset = text.x - thingX;
+        yOffset = text.y - thingY;
+        text.moveTo (x + xOffset, y + yOffset);
+    }
+    for (var rectName in this.rects) {
+        var rect = this.rects[rectName];
+        xOffset = thingX - rect.x;
+        yOffset = thingY - rect.y;
+        rect.moveTo (x + xOffset, y + yOffset);
+    }
+    for (var animName in this.animations) {
+        var anim = this.anims[animName];
+        xOffset = thingX - anim.x;
+        yOffset = thingY - anim.y;
+        anim.moveTo (x + xOffset, y + yOffset);
+    }
+    var path;
+    for (var pathName in this.paths) {
+        path = this.paths[pathName];
+        if (path instanceof Circle) {
+            xOffset = path.x - thingX;
+            yOffset = path.y - thingY;
+            path.moveTo (x + xOffset, y + yOffset);
+        }
+    }
+    this.isUpdated = false;
+};
+
+CanvasLayer.prototype.imageMoveTo = function (x, y, maintainOffset) {
+
     // loop through each drawable, call their moveTo functions
     for (var spriteName in this.sprites) {
         this.sprites[spriteName].moveTo (x, y);
@@ -2858,6 +3004,16 @@ CanvasLayer.prototype.imageMoveTo = function (x, y) {
     }
     for (var animName in this.animations) {
         this.animations[animName].moveTo (x, y);
+    }
+    for (var textName in this.texts) {
+        this.texts[textName].moveTo (x, y);
+    }
+    var path;
+    for (var pathName in this.paths) {
+        path = this.paths[pathName];
+        if (path instanceof Circle) {
+            path.moveTo (x, y);
+        }
     }
     this.isUpdated = false;
 }
@@ -2918,8 +3074,8 @@ CanvasLayer.prototype.move = function (x, y) {
 
 CanvasLayer.prototype.center = function () {
 
-    proto.debug && console.log ('window.innerWidth = ' + window.innerWidth);
-    proto.debug && console.log ('this.canvas.width = ' + this.canvas.width);
+    proto.DEBUG && console.log ('window.innerWidth = ' + window.innerWidth);
+    proto.DEBUG && console.log ('this.canvas.width = ' + this.canvas.width);
     this.canvasTop = ((window.innerHeight - this.canvas.height) / 2.0);
     this.canvasLeft = ((window.innerWidth - this.canvas.width) / 2.0);
     this.canvas.setAttribute ("style", 
@@ -2929,14 +3085,14 @@ CanvasLayer.prototype.center = function () {
                              "top: " + this.canvasTop + "px;" +
                              "left: " + this.canvasLeft + "px; " +
                              "z-index: " + this.zIndex + ";");
-    proto.debug && console.log ('this.canvas.style.left = ' +
+    proto.DEBUG && console.log ('this.canvas.style.left = ' +
                  this.canvas.style.left);
 }
 
 CanvasLayer.prototype.alignToDummy = function (dummyCanvas) {
 
-    proto.debug && console.log ('window.innerWidth = ' + window.innerWidth);
-    proto.debug && console.log ('this.canvas.width = ' + this.canvas.width);
+    proto.DEBUG && console.log ('window.innerWidth = ' + window.innerWidth);
+    proto.DEBUG && console.log ('this.canvas.width = ' + this.canvas.width);
     this.canvasTop = $(dummyCanvas)
         .position ().top + this.offsetY;
     this.canvasLeft = $(dummyCanvas)
@@ -2949,7 +3105,7 @@ CanvasLayer.prototype.alignToDummy = function (dummyCanvas) {
                              "top: " + this.canvasTop + "px;" +
                              "left: " + this.canvasLeft + "px; " +
                              "z-index: " + this.zIndex + ";");
-    proto.debug && console.log ('this.canvas.style.left = ' +
+    proto.DEBUG && console.log ('this.canvas.style.left = ' +
                  this.canvas.style.left);
 }
 
@@ -3018,20 +3174,21 @@ Path.lineTo = 0;
 Path.moveTo = 1;
 Path.arc = 2;
 Path.bezierCurveTo = 3;
+Path.closePath = 4;
 
 
 /* private prototype Command */
 
-Path.Command = function (cmmd, opts) {
+Path.Command = function (cmmd, opts, owner) {
 
     this.cmmd = cmmd;
+    this.coordType;
+    this.owner = owner;
 
     if (cmmd === Path.lineTo || cmmd === Path.moveTo) {
-        this.x = opts.x;
-        this.y = opts.y;
+        this.parseCoords (opts);
     } else if (cmmd === Path.arc) {
-        this.x = opts.x;
-        this.y = opts.y;
+        this.parseCoords (opts);
         this.radius = opts.radius;
         this.startAngle = opts.startAngle;
         this.endAngle = opts.endAngle;
@@ -3041,25 +3198,46 @@ Path.Command = function (cmmd, opts) {
         this.cp1y = opts.cp1y;
         this.cp2x = opts.cp2x;
         this.cp2y = opts.cp2y;
-        this.x = opts.x;
-        this.y = opts.y;
+        this.parseCoords (opts);
+    } else if (cmmd === Path.closePath) {
     } else {
-        proto.debug && console.log ("Command: error: invalid cmmd type");
+        proto.DEBUG && console.log ("Command: error: invalid cmmd type");
         return null;
     }
 }
 
+Path.Command.prototype.parseCoords = function (opts) {
+    if (opts['r'] !== undefined && opts['theta'] !== undefined) {
+        this.r = opts['r'];
+        this.theta = opts['theta']; // radians
+        this.coordType = 'polar';
+    } else if (opts['x'] !== undefined && opts['y'] !== undefined) {
+        this.x = opts['x'];
+        this.y = opts['y'];
+        this.coordType = 'cartesian';
+    }
+}
+
 Path.Command.prototype.executeCommand = function (ctx) {
+    //proto.DEBUG && console.log ('executeCommand: currPosX, currPosY = ' +
+        //this.owner.currPosX + ',' + this.owner.currPosY);
+
+    if (this.coordType === 'polar') {
+        this.x = this.owner.currPosX + 
+            proto.polarToCartX (this.r, this.theta);
+        this.y = this.owner.currPosY -
+            proto.polarToCartY (this.r, this.theta);
+    }
 
     switch (this.cmmd) {
         case Path.moveTo:
-            proto.debug && console.log ("executeCommand: moveTo(" + this.x +
-                         ", " + this.y + ")");
+            /*proto.DEBUG && console.log ("executeCommand: moveTo(" + this.x +
+                         ", " + this.y + ")");*/
             ctx.moveTo (this.x, this.y);
             break;
         case Path.lineTo:
-            proto.debug && console.log ("executeCommand: lineTo(" + this.x +
-                         ", " + this.y + ")");
+            /*proto.DEBUG && console.log ("executeCommand: lineTo(" + this.x +
+                         ", " + this.y + ")");*/
             ctx.lineTo (this.x, this.y);
             break;
         case Path.bezierCurveTo:
@@ -3072,9 +3250,15 @@ Path.Command.prototype.executeCommand = function (ctx) {
                      this.radius, this.startAngle,
                      this.endAngle, this.anticlockwise);
             break;
+        case Path.closePath:
+            proto.DEBUG && console.log ('close path');
+            ctx.closePath ();
+            break;
         default:
-            proto.debug && console.log ("executeCommand: switch error");
+            proto.DEBUG && console.log ("executeCommand: switch error");
     }
+    this.owner.currPosX = this.x;
+    this.owner.currPosY = this.y;
 }
 
 function Path (argsDict) {
@@ -3085,14 +3269,18 @@ function Path (argsDict) {
         lineWidth: 0,
         isFilled: true,
         isHidden: false,
-        color: "black"
+        lineJoin: 'round',
+        color: "black",
+        cmmds: []
     }
 
     proto.unpack.apply (this, [argsDict, defaultPropsDict]);
 
-    this.owner = null;
+    // used for polar coordinates
+    this.currPosX;
+    this.currPosY;
 
-    this.cmmds = [];
+    this.owner = null;
 }
 
 Path.prototype.setColor = function (string) {
@@ -3101,9 +3289,9 @@ Path.prototype.setColor = function (string) {
 }
 
 Path.prototype.addCommand = function (cmmd, opts) {
-    var cmmd = new Path.Command (cmmd, opts);
+    var cmmd = new Path.Command (cmmd, opts, this);
     if (!cmmd) {
-        proto.debug && console.log ("addCommand: error: invalid args");
+        proto.DEBUG && console.log ("addCommand: error: invalid args");
     }
     this.cmmds.push (cmmd);
 }
@@ -3114,10 +3302,11 @@ Path.prototype.clearCommands = function (cmmd, opts) {
 
 Path.prototype.draw = function (canvas, ctx, view) {
 
-    proto.debug && console.log ('path.draw: drawing');
+    proto.DEBUG && console.log ('path.draw: drawing');
     ctx.fillStyle = this.color; 
     ctx.strokeStyle = this.color; 
     ctx.lineWidth = this.lineWidth; 
+    ctx.lineJoin = this.lineJoin; 
     ctx.beginPath ();
 
     for (var cmmd in this.cmmds) {
@@ -3137,8 +3326,8 @@ Path.prototype.draw = function (canvas, ctx, view) {
 
 function Circle (argsDict) {
     argsDict = typeof argsDict === 'undefined' ? {} : argsDict;
-    console.log ('new Circle: ');
-    console.debug ($.extend (true, {}, argsDict));
+    proto.DEBUG && console.log ('new Circle: ');
+    proto.DEBUG && console.debug ($.extend (true, {}, argsDict));
     var defaultPropsDict = {
         name: null,
         x: 0,
@@ -3222,7 +3411,7 @@ Rect.prototype.moveToRelative = function (x, y) {
 Rect.prototype.draw = function (canvas, ctx, view) {
 
     // draw if image is inside the view
-    proto.debug && console.log ('Rect.draw: drawing ' + this.name+
+    proto.DEBUG && console.log ('Rect.draw: drawing ' + this.name+
                  'this.x = ' + this.x +
                  'this.y = ' + this.y +
                  'view.x = ' + view.x +
@@ -3235,7 +3424,7 @@ Rect.prototype.draw = function (canvas, ctx, view) {
          this.x - this.width <= view.x + view.width) &&
         (this.y + this.height >= view.y && 
          this.y - this.height <= view.y + view.height)) {
-        proto.debug && console.log ('drawing ' + this.color);
+        proto.DEBUG && console.log ('drawing ' + this.color);
         ctx.fillStyle = this.color; 
         ctx.fillRect (this.x - view.x, this.y - view.y, this.width, 
                       this.height);
@@ -3253,8 +3442,8 @@ function Square (argsDict) {
     // add Path's properties                   
     Rect.call (this, argsDict);
 
-    proto.debug && console.log ('new Square '); 
-    proto.debug && console.log (this);
+    proto.DEBUG && console.log ('new Square '); 
+    proto.DEBUG && console.log (this);
 
 }
 
@@ -3310,7 +3499,7 @@ Arguments:
 Sprite.prototype.draw = function (canvas, ctx, view) {
 
     // draw if image is inside the view
-    proto.debug && console.log ('Sprite.draw: drawing ' + this.image.src +
+    proto.DEBUG && console.log ('Sprite.draw: drawing ' + this.image.src +
                  'this.x = ' + this.x +
                  'this.y = ' + this.y +
                  'view.x = ' + view.x +
@@ -3321,7 +3510,7 @@ Sprite.prototype.draw = function (canvas, ctx, view) {
          this.x - this.width <= view.x + view.width) &&
         (this.y + this.height >= view.y && 
          this.y - this.height <= view.y + view.height)) {
-        proto.debug && console.log ('drawing');
+        proto.DEBUG && console.log ('drawing');
         ctx.drawImage (this.image, this.x - view.x, 
                       this.y - view.y, this.width, this.height);
     }
@@ -3331,7 +3520,7 @@ Sprite.prototype.drawSlice = function (canvas, ctx, view,
                                         sx, sy, swidth, sheight,
                                         dx, dy, dwidth, dheight) {
 
-    proto.debug && console.log ('Sprite.drawSlice: drawing');
+    proto.DEBUG && console.log ('Sprite.drawSlice: drawing');
     ctx.drawImage (this.image, sx, sy, swidth, sheight, 
                    this.x - view.x + dx, this.y - view.y + dy, 
                    dwidth, dheight);
@@ -3342,14 +3531,14 @@ Sprite.prototype.drawSlice = function (canvas, ctx, view,
 Sprite.prototype.drawFixed = function (canvas, ctx, view) {
 
     // draw if image is inside the view
-    proto.debug && console.log ('Sprite.draw: drawing ' + this.image.src +
+    proto.DEBUG && console.log ('Sprite.draw: drawing ' + this.image.src +
                  'this.x = ' + this.x +
                  'this.y = ' + this.y +
                  'view.x = ' + view.x +
                  'view.y = ' + view.y +
                  'this.x - view.x = ' + (this.x - view.x) +
                  'this.y - view.y = ' + (this.y - view.y));
-    proto.debug && console.log ('drawing');
+    proto.DEBUG && console.log ('drawing');
     ctx.drawImage (this.image, this.x - view.x, 
                    this.y - view.y, this.width, this.height);
 }
@@ -3475,7 +3664,7 @@ function Animation (argsDict) {
                 this.addSprite (spr);
             }
         } else {
-            proto.debug && console.log (
+            proto.DEBUG && console.log (
                 "Error: Animation: imagePaths of invalid type");
         }
     }
@@ -3505,13 +3694,13 @@ Animation.prototype.addSprite = function (sprite) {
     this.isLoaded = false;
 
     // if the sprite is not loaded, keep checking until it is
-    proto.debug && console.log ("Animation.addSprite: sprite.isLoaded = " +
+    proto.DEBUG && console.log ("Animation.addSprite: sprite.isLoaded = " +
                  sprite.isLoaded);
 
     if (sprite.isLoaded == false) {
         var that = this;
         setTimeout (function checkIsLoaded () {
-            proto.debug && console.log ("checkIsLoaded: sprite, sprite.isLoaded = " +
+            proto.DEBUG && console.log ("checkIsLoaded: sprite, sprite.isLoaded = " +
                          sprite.image.src + ", " + 
                          sprite.isLoaded);
             if (sprite.isLoaded == false) {
@@ -3558,7 +3747,7 @@ Animation.prototype.setRotation = function (rotationInc, origX,
 }
 
 Animation.prototype.draw = function (canvas, ctx, view) {
-    proto.debug && console.log ("drawing animation frame");
+    proto.DEBUG && console.log ("drawing animation frame");
     var currSpr = this.sprites[this._nextFrame];
 
     if (this.rotationInc != 0) { // handle rotating sprite
@@ -3594,7 +3783,7 @@ Animation.prototype.draw = function (canvas, ctx, view) {
 }
 
 Animation.prototype.drawFixed = function (canvas, ctx, view) {
-    proto.debug && console.log ("drawing animation frame");
+    proto.DEBUG && console.log ("drawing animation frame");
     var currSpr = this.sprites[this._nextFrame];
 
     if (this.rotationInc != 0) { // handle rotating sprite
@@ -3667,7 +3856,7 @@ Animation.prototype.setFrame = function (frameNum) {
 
     if (frameNum >= this.sprites.length ||
         frameNum < 0) {
-        proto.debug && console.log ("Animation.setFrame: invalid frame number");
+        proto.DEBUG && console.log ("Animation.setFrame: invalid frame number");
         return;
     }
 
@@ -3694,7 +3883,7 @@ Animation.prototype.start = function (once /* optional */) {
     this.animTimeout = setTimeout (function animate () {
 
         if (!thisAnim.isStopped) {
-            proto.debug && console.log ('animating, speed = ' + thisAnim.speed);
+            proto.DEBUG && console.log ('animating, speed = ' + thisAnim.speed);
 
             thisAnim._nextFrame = thisAnim._nextFrame + 1;
             if (thisAnim._nextFrame >= thisAnim.sprites.length) {
@@ -3705,11 +3894,11 @@ Animation.prototype.start = function (once /* optional */) {
                 thisAnim.rotationAng += thisAnim.rotationInc; 
             }
  
-            //proto.debug && console.debug (thisAnim.owner);
+            //proto.DEBUG && console.debug (thisAnim.owner);
             thisAnim.owner.isUpdated = false;
 
             if (once && thisAnim._nextFrame === 0) {
-                proto.debug && console.log ('animation finished once');
+                proto.DEBUG && console.log ('animation finished once');
                 thisAnim.stop ();
                 return;
             }
@@ -3776,7 +3965,7 @@ function CustomFont (name, cellWidth, cellHeight, imagePath) {
     if (this.fontImage.isLoaded == false) {
         var that = this;
         setTimeout (function checkIsLoaded () {
-            proto.debug && console.log (
+            proto.DEBUG && console.log (
                 "checkIsLoaded: sprite, sprite.isLoaded = " +
                 that.fontImage.image.src + ", " + 
                 that.fontImage.isLoaded);
@@ -3793,7 +3982,7 @@ CustomFont.prototype.drawLine = function (line, canvas, ctx, view,
                                             x, y, lineWidth, 
                                             fontSize) {
 
-    proto.debug && console.log ("CustomFont.drawLine: drawing " + line);
+    proto.DEBUG && console.log ("CustomFont.drawLine: drawing " + line);
 
     var letterWidth = 
         Math.min ((this.cellWidth / this.cellHeight) * fontSize, 
@@ -3812,7 +4001,7 @@ CustomFont.prototype.drawLetter = function (letter, canvas, ctx,
                                               view, x, y, width,
                                               height) {
 
-    proto.debug && console.log ("CustomFont.draw: drawing " + letter);
+    proto.DEBUG && console.log ("CustomFont.draw: drawing " + letter);
 
     var asciiVal = letter.charCodeAt (0);
 
@@ -3831,7 +4020,7 @@ CustomFont.prototype.drawLetter = function (letter, canvas, ctx,
         fontRow = 3;
         fontCol = asciiVal - 32;
     } else {
-        proto.debug && console.log ("CustomFont.draw: Warning: invalid char");
+        proto.DEBUG && console.log ("CustomFont.draw: Warning: invalid char");
         return;
     }
 
@@ -3866,31 +4055,22 @@ function Text (argsDict) {
         x: 0,
         y: 0,
         font: 'courier', // a string or CustomFont object
-        fontSize: '12px',
-        lineLength: '72', // max characters per line
-        lineWidth: '72px', // max line width
+        fontSize: 12,
+        lineLength: 72, // max characters per line
+        lineWidth: 72, // max line width
         string: '', // the text to be drawn
         alignment: 'left',
-        rVal: 0,
-        gVal: 0,
-        bVal: 0,
+        color: 'black',
         spacing: 0
     };
 
     proto.unpack.apply (this, [argsDict, defaultPropsDict]);
 
-    this.fontType = typeof (font);
+    this.fontType = typeof (this.font);
     this.lineHeight = this.fontSize;
     //this.lines = 0;
     this.lines = this.string.length / this.lineLength;
 
-}
-
-// used to change to the color of the text drawn with Text.draw ()
-Text.prototype.setRgb = function (rVal, gVal, bVal) {
-    this.rVal = rVal;
-    this.gVal = gVal;
-    this.bVal = bVal;
 }
 
 /*
@@ -3935,20 +4115,19 @@ Text.prototype.draw = function (canvas, ctx, view) {
     var line;
     var lineNumber = 1;
 
-    proto.debug && console.log ('Text.draw: drawing ' + this.string);
-    proto.debug && console.log ('canvasLayer.clear, name = ' + this.name);
-    if (this.fontType == 'string') {
+    proto.DEBUG && console.log ('Text.draw: drawing ' + this.string);
+    proto.DEBUG && console.log ('name = ' + this.name);
+    if (this.fontType === 'string') {
         //ctx.clearRect (0, 0, view.width, view.height);
         ctx.font = this.fontSize + "pt " + this.font;
-        ctx.fillStyle = "rgb(" + this.rVal + ", " + this.gVal + ", " + 
-                        this.bVal + ")";
+        ctx.fillStyle = this.color;
         ctx.textAlign = this.alignment;
     }
 
     // draw text one line at a time
     while (remainingString.length > this.lineLength ||
            remainingString.indexOf ('\n') != -1) {
-        proto.debug && console.log ('Text.draw: drawing line ' + lineNumber);
+        //proto.DEBUG && console.log ('Text.draw: drawing line ' + lineNumber);
 
         // handle newline characters
         if (remainingString.indexOf ('\n') != -1 &&
@@ -3964,14 +4143,14 @@ Text.prototype.draw = function (canvas, ctx, view) {
                 remainingString.substring (this.lineLength + 1);
         }
 
-        proto.debug && console.log ('Text.draw: line = ' + line);
-
-        proto.debug && console.log ('Text.draw: this.x - view.x = ' + 
+        //proto.DEBUG && console.log ('Text.draw: line = ' + line);
+/*
+        proto.DEBUG && console.log ('Text.draw: this.x - view.x = ' + 
                      (this.x - view.x));
-        proto.debug && console.log ('Text.draw: y = ' + 
+        proto.DEBUG && console.log ('Text.draw: y = ' + 
               ((this.y - view.y) + (lineNumber * this.lineHeight)));
-
-        if (this.fontType == 'string') {
+*/
+        if (this.fontType === 'string') {
             ctx.fillText (line, this.x - view.x, 
                           (this.y - view.y) + 
                           (lineNumber * this.lineHeight),
@@ -3989,14 +4168,17 @@ Text.prototype.draw = function (canvas, ctx, view) {
     }
 
     // draw any remaining text
-    proto.debug && console.log ('Text.draw: drawing line ' + lineNumber);
-    proto.debug && console.log ('Text.draw: line = ' + remainingString);
-    proto.debug && console.log ('Text.draw: this.x - view.x = ' + 
+    /*proto.DEBUG && console.log ('Text.draw: drawing line ' + lineNumber);
+    proto.DEBUG && console.log ('Text.draw: line = ' + remainingString);
+    proto.DEBUG && console.log ('Text.draw: this.x - view.x = ' + 
                  (this.x - view.x));
-    proto.debug && console.log ('Text.draw: y = ' + 
-          ((this.y - view.y) + (lineNumber * this.lineHeight)));
+    proto.DEBUG && console.log ('view.y = ' + view.y);
+    proto.DEBUG && console.log ('this.lineHeight = ' + this.lineHeight);
+    proto.DEBUG && console.log ('Text.draw: y = ' + 
+          ((this.y - view.y) + (lineNumber * this.lineHeight)));*/
 
-    if (this.fontType == 'string') {
+    if (this.fontType === 'string') {
+        //console.log ('Text.draw: drawing line');
         ctx.fillText (
             remainingString, this.x - view.x, 
             (this.y - view.y) + 
