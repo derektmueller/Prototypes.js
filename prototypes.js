@@ -4,8 +4,6 @@ https://github.com/parenparen/Prototypes.js
 Copyright 2013 Derek Mueller
 Released under the MIT license
 http://opensource.org/licenses/MIT
-
-Sat Nov  9 15:28:29 PST 2013
 */
 
 //// prototypes
@@ -20,7 +18,7 @@ proto.RETURN = 13;
 proto.DOWN = 40;
 proto.SPACE = 32;
 proto.MP = false;
-proto.LOCAL = false;
+proto.LOCAL = true;
 proto.DEBUG = false;
 proto.socket = null;
 proto.activeWorld = null;
@@ -229,7 +227,7 @@ World.animLoop = function (world) {
 World.resize = function (world) {
     return function inner () {
         if (world.isStopped) {
-            $(document).unbind ('click', inner);
+            $(document).unbind ('resize', inner);
             return;
         }
         if (world.currRegion)
@@ -246,9 +244,9 @@ World.click = function (world) {
         }
         proto.DEBUG && console.log ('click: ' + evt.clientX + ', ' + evt.clientY);
         var mouseX = evt.clientX - 
-                $('#' + world.name).position ().left;
+                $('#' + world.name).offset ().left;
         var mouseY = evt.clientY - 
-                $('#' + world.name).position ().top +
+                $('#' + world.name).offset ().top +
                      $(window).scrollTop ();
         if (world.currRegion)
             world.currRegion.click (mouseX, mouseY, world.view);
@@ -259,14 +257,14 @@ World.click = function (world) {
 World.mousemove = function  (world) {
     return function inner (evt) {
         if (world.isStopped) {
-            $(document).unbind ('click', inner);
+            $(document).unbind ('mousemove', inner);
             return;
         }
         //console.log ('mousemove: ' + evt.clientX + ', ' + evt.clientY);
         var mouseX = evt.clientX - 
-                $('#' + world.name).position ().left;
+                $('#' + world.name).offset ().left;
         var mouseY = evt.clientY - 
-                $('#' + world.name).position ().top +
+                $('#' + world.name).offset ().top +
                      $(window).scrollTop ();
         world.mousemove (mouseX, mouseY);
         if (world.currRegion)
@@ -281,15 +279,16 @@ World.mousemove = function  (world) {
 World.mousedown = function (world) {
     return function inner (evt) {
         if (world.isStopped) {
-            $(document).unbind ('click', inner);
+            $(document).unbind ('mousedown', inner);
             return;
         }
         proto.DEBUG && console.log ('mousedown: ' + evt.clientX + ', ' + evt.clientY);
         var mouseX = evt.clientX - 
-                $('#' + world.name).position ().left;
+                $('#' + world.name).offset ().left;
         var mouseY = evt.clientY - 
-                $('#' + world.name).position ().top +
+                $('#' + world.name).offset ().top +
                      $(window).scrollTop ();
+        proto.DEBUG && console.log ('mousedown translated: ' + mouseX + ', ' + mouseY);
         if (world.currRegion)
             world.currRegion.mousedown (mouseX, mouseY, world.view);
     };
@@ -298,14 +297,14 @@ World.mousedown = function (world) {
 World.mouseup = function (world) {
     return function inner (evt) {
         if (world.isStopped) {
-            $(document).unbind ('click', inner);
+            $(document).unbind ('mouseup', inner);
             return;
         }
         proto.DEBUG && console.log ('mouseup: ' + evt.clientX + ', ' + evt.clientY);
         var mouseX = evt.clientX - 
-                $('#' + world.name).position ().left;
+                $('#' + world.name).offset ().left;
         var mouseY = evt.clientY - 
-                $('#' + world.name).position ().top +
+                $('#' + world.name).offset ().top +
                      $(window).scrollTop ();
         if (world.currRegion)
             world.currRegion.mouseup (mouseX, mouseY, world.view);
@@ -315,7 +314,7 @@ World.mouseup = function (world) {
 World.keydown = function (world) {
     return function inner (evt) {
         if (world.isStopped) {
-            $(document).unbind ('click', inner);
+            $(document).unbind ('keydown', inner);
             return;
         }
         //evt.preventDefault ();
@@ -349,7 +348,7 @@ World.keydown = function (world) {
 World.keyup = function (world) {
     return function inner (evt) {
         if (world.isStopped) {
-            $(document).unbind ('click', inner);
+            $(document).unbind ('keyup', inner);
             return;
         }
         //evt.preventDefault ();
@@ -376,7 +375,7 @@ World.keyup = function (world) {
 World.keypress = function (world) {
     return function inner (evt) {
         if (world.isStopped) {
-            $(document).unbind ('click', inner);
+            $(document).unbind ('keypress', inner);
             return;
         }
         //evt.preventDefault ();
@@ -448,8 +447,6 @@ function World (argsDict) {
         id: this.name,
         width: this.view.width,
         height: this.view.height,
-        position: "relative",
-        "top": "10ex",
         visibility: "hidden",
         "z-index": "2"
     });
